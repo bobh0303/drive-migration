@@ -5,22 +5,30 @@ import re
 import csv
 import xlsxwriter
 
+# Input and output files
+inputCSV = 'master.csv'
+outputExcel = 'output.xlsx'
+
 # inputCST headers:
+HISTORY = 'History'
 ID = 'File/Folder id'
 NAME = 'Name'
 PATH = 'Path'
 URL = 'WebViewLink'
 NUM = 'permissions'
 
-# Column headers:
-columnHeaders = ('Type', 'Item', 'Path', '#perms', 'owner', 'writers', 'readers', 'commenters', 'missingWriters', 'missingCommenters', 'caseIndex')
+# Output column headers:
+columnHeaders = ('History', 'Type', 'Item', 'Path', 'caseIndex', 'Disposition strategy', '#perms', 'owner', 'writers', 'readers', 'commenters', 'missingWriters', 'missingCommenters')
 columnCount = len(columnHeaders)
 columnLast = columnCount-1
 
 # output column header index
+colHistory,     \
 colType,        \
 colItem,        \
 colPath,        \
+colCaseIndex,   \
+colDisposition, \
 colPermCount,   \
 colOwner,       \
 colWriters,     \
@@ -28,12 +36,7 @@ colReaders,     \
 colCommenters,  \
 colMissingWriters, \
 colMissingCommenters, \
-colCaseIndex,   \
     = range(columnCount)
-
-# Input and output files
-inputCSV = 'Inventory2026-01-15.csv'
-outputExcel = 'output.xlsx'
 
 # Some permission sets:
 stdWriters = set((
@@ -47,13 +50,13 @@ stdCommenters = set(('jim_brase',))
 # stdReaders = set()
 
 # Folder URLs 
-folderURLs = {'/WSTech Team/': 'https://drive.google.com/drive/folders/0B-U3EYurfq2sQjF3c05IdTJDdHc?resourcekey=0-_aJvzSliP5q2ZQdSP8jspQ'}
+folderURLs = {'WSTech Team/': 'https://drive.google.com/drive/folders/0B-U3EYurfq2sQjF3c05IdTJDdHc?resourcekey=0-_aJvzSliP5q2ZQdSP8jspQ'}
 
 # Keep track of how many unique sets of non-standard permissions we have
 # Index is f'{missingWriters}|{missingCommenters}'; valuse an index. 
 permissionCaseIndex = {'|': ''}
 
-with open(inputCSV, newline='') as csvfile:
+with open(inputCSV, newline='', encoding='utf-8-sig') as csvfile:
     reader = csv.DictReader(csvfile)
     with xlsxwriter.Workbook(outputExcel) as workbook:  
         # define/update formats:
@@ -95,10 +98,11 @@ with open(inputCSV, newline='') as csvfile:
 
             permCount = int('0'+line[NUM])
 
+            worksheet.write_string(row, colHistory, line[HISTORY])
             worksheet.write_string(row, colType, itemType)
             worksheet.write_url(   row, colItem, url, string=name)
             try:
-                worksheet.write_url(   row, colPath, folderURLs[path], string=path)
+                worksheet.write_url(row, colPath, folderURLs[path], string=path)
             except KeyError:
                 print(f'\nrow {row}: bad URL for path - "{path}"\n', file=sys.stderr)
                 worksheet.write_string(   row, colPath, path)
@@ -107,12 +111,11 @@ with open(inputCSV, newline='') as csvfile:
             # process permissions, if any.
             roles = {}
             for p in range(permCount):
-                if p < 2:
-                    # check for link-sharing
-                    fileDiscovery = line[f'permissions.{p}.allowFileDiscovery']
-                    if len(fileDiscovery):
-                        # this is some kind of link sharing -- we're ignoring for now
-                        continue
+                # check for link-sharing
+                fileDiscovery = line.get(f'permissions.{p}.allowFileDiscovery', '')
+                if len(fileDiscovery):
+                    # this is some kind of link sharing -- we're ignoring for now
+                    continue
                 role = line[f'permissions.{p}.role']
                 email = line[f'permissions.{p}.emailAddress'].split('@')[0]
                 # Special case: treat director_nrsi and director_wstech as equivalent:

@@ -7,7 +7,7 @@ import xlsxwriter
 
 # Input and output files
 inputCSV = 'master.csv'
-outputExcel = 'output.xlsx'
+outputExcel = 'output-v3.xlsx'
 
 # inputCST headers:
 HISTORY = 'History'
@@ -18,7 +18,7 @@ URL = 'WebViewLink'
 NUM = 'permissions'
 
 # Output column headers:
-columnHeaders = ('History', 'Type', 'Item', 'Path', 'caseIndex', 'Disposition strategy', '#perms', 'owner', 'writers', 'readers', 'commenters', 'missingWriters', 'missingCommenters')
+columnHeaders = ('History', 'Type', 'Item', 'Path', 'caseIndex', 'Status', 'Disposition strategy', '#perms', 'owner', 'writers', 'readers', 'commenters', 'missingWriters', 'missingCommenters')
 columnCount = len(columnHeaders)
 columnLast = columnCount-1
 
@@ -28,6 +28,7 @@ colType,        \
 colItem,        \
 colPath,        \
 colCaseIndex,   \
+colStatus,      \
 colDisposition, \
 colPermCount,   \
 colOwner,       \
@@ -71,7 +72,7 @@ with open(inputCSV, newline='', encoding='utf-8-sig') as csvfile:
 
         # Set default cell format and wrapping
         worksheet.set_column(0, columnLast, None, wrapFormat)
-        for col in (colType, colPermCount):
+        for col in (colType, colCaseIndex, colPermCount):
             worksheet.set_column(col, col, None, hCenterFormat)
         
         worksheet.write_row(0,0, columnHeaders)
@@ -150,6 +151,7 @@ with open(inputCSV, newline='', encoding='utf-8-sig') as csvfile:
             caseIndex = permissionCaseIndex.setdefault(f'{missingWriters}|{missingCommenters}', len(permissionCaseIndex))
             if caseIndex:
                 worksheet.write_number(row, colCaseIndex, caseIndex)
+                ## worksheet.insert_checkbox(row, colStatus, False)  # Doesn't work in Excel 2016; isn't compatible with Google anyway.
 
             row += 1
             

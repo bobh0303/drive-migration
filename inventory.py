@@ -7,7 +7,7 @@ import xlsxwriter
 
 # Input and output files
 inputCSV = 'master.csv'
-outputExcel = 'output-v3.xlsx'
+outputExcel = 'output-v4.xlsx'
 
 # inputCST headers:
 HISTORY = 'History'
@@ -18,7 +18,8 @@ URL = 'WebViewLink'
 NUM = 'permissions'
 
 # Output column headers:
-columnHeaders = ('History', 'Type', 'Item', 'Path', 'caseIndex', 'Status', 'Disposition strategy', '#perms', 'owner', 'writers', 'readers', 'commenters', 'missingWriters', 'missingCommenters')
+columnHeaders = ('History', 'Type', 'Item', 'Path', 'caseIndex', 'Status', 'Disposition strategy', 
+                '#perms', 'owner', 'writers', 'readers', 'commenters', 'missing Writers', 'missing Commenters', 'missing Entirely')
 columnCount = len(columnHeaders)
 columnLast = columnCount-1
 
@@ -35,19 +36,43 @@ colOwner,       \
 colWriters,     \
 colReaders,     \
 colCommenters,  \
-colMissingWriters, \
+colMissingWriters,    \
 colMissingCommenters, \
+colMissingEntirely,   \
     = range(columnCount)
 
+abbreviations = {
+    'alan_ward@sil.org'         : 'AW', 
+    'annie_olsen@sil.org'       : 'AO', 
+    'becca_spalinger@sil.org'   : 'BHS', 
+    'bob_hallissy@sil.org'      : 'BH', 
+    'bobby_devos@sil.org'       : 'BdV', 
+    'david_raymond@sil.org'     : 'DR', 
+    'david_rowe@sil.org'        : 'DLR', 
+    'dawson_tennant@sil.org'    : 'DT', 
+    'emily_roth@sil.org'        : 'ER', 
+    'jim_brase@sil.org'         : 'JB',
+    'jon_coblentz@sil.org'      : 'JC', 
+    'kim_rasmussen@sil.org'     : 'KR', 
+    'lorna_evans@sil.org'       : 'LE',
+    # At present, omit eric_macleod
+    'martin_hosken@sil.org'     : 'MH', 
+    'martin_raymond@sil.org'    : 'MR', 
+    'michael_cochran@sil.org'   : 'MC', 
+    'nicolas_spalinger@sil.org' : 'NS', 
+    # omit nrsi.old.gdocs
+    'peter_martin@sil.org'      : 'PM', 
+    'sharon_correll@sil.org'    : 'SC', 
+    'steven_dyk@sil.org'        : 'SD', 
+    'tim_eves@sil.org'          : 'TE', 
+    'victor_gaultney@sil.org'   : 'VG',
+    'director_wstech@sil.org'   : 'DIR',
+    'director_nrsi@sil.org'     : 'DIR'}
 # Some permission sets:
-stdWriters = set((
-    'alan_ward', 'annie_olsen', 'becca_spalinger', 'bob_hallissy', 
-    'bobby_devos', 'david_raymond', 'david_rowe', 'dawson_tennant', 
-    'emily_roth', 'jon_coblentz', 'kim_rasmussen', 'lorna_evans',       # At present, omit eric_macleod
-    'martin_hosken', 'martin_raymond', 'michael_cochran', 'nicolas_spalinger', # omit nrsi.old.gdocs
-    'peter_martin', 'sharon_correll', 'steven_dyk', 'tim_eves', 'victor_gaultney',
-    'Director')) 
-stdCommenters = set(('jim_brase',))
+teamAll = set(abbreviations.values())
+stdCommenters = {'JB'}
+stdWriters = teamAll - stdCommenters 
+
 # stdReaders = set()
 
 # Folder URLs 
@@ -118,10 +143,14 @@ with open(inputCSV, newline='', encoding='utf-8-sig') as csvfile:
                     # this is some kind of link sharing -- we're ignoring for now
                     continue
                 role = line[f'permissions.{p}.role']
-                email = line[f'permissions.{p}.emailAddress'].split('@')[0]
-                # Special case: treat director_nrsi and director_wstech as equivalent:
-                if re.match(r'director_(?:wstech|nrsi)$', email):
-                    email = 'Director'
+                # pick up email address but replace with initials if available, and strip @gmail.com from nrsi.old.gdocs'
+                email = line[f'permissions.{p}.emailAddress']
+                try:
+                    email = abbreviations[email]
+                except KeyError:
+                    pass
+                if email == 'nrsi.old.gdocs@gmail.com':
+                    email = 'nrsi.old.gdocs'
                 roles.setdefault(role,set()).add(email)
             # add permissions to output
             for col,role in zip(range(colOwner,colOwner+4),('owner','writer', 'reader', 'commenter')):
@@ -138,13 +167,18 @@ with open(inputCSV, newline='', encoding='utf-8-sig') as csvfile:
             
             missingWriters = stdWriters - roles['writer']
             missingWriters.discard(owner)
-            missingWriters = ' '.join(sorted(missingWriters))
+            missingWriters = ', '.join(sorted(missingWriters))
             worksheet.write_string(row, colMissingWriters, missingWriters)
             
             missingCommenters = stdCommenters - roles['writer'] - roles['commenter']
             missingCommenters.discard(owner)
-            missingCommenters = ' '.join(sorted(missingCommenters))
+            missingCommenters = ', '.join(sorted(missingCommenters))
             worksheet.write_string(row, colMissingCommenters, missingCommenters)
+
+            missingEntirely = teamAll - roles['writer'] - roles['commenter']
+            missingEntirely.discard(owner)
+            missingEntirely = ', '.join(sorted(missingEntirely))
+            worksheet.write_string(row, colMissingEntirely, missingEntirely)
 
             # Keep track of all unique cases:
 

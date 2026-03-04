@@ -19,7 +19,7 @@ NUM = 'permissions'
 
 # Output column headers:
 columnHeaders = ('History', 'Type', 'Item', 'Path', 'caseIndex', 'Status', 'Disposition strategy', 
-                '#perms', 'owner', 'writers', 'readers', 'commenters', 'missing Writers', 'missing Commenters', 'missing Entirely')
+                '#perms', 'owner', 'writers', 'commenters', 'readers', 'missing writers', 'missing commenters', 'missing entirely')
 columnCount = len(columnHeaders)
 columnLast = columnCount-1
 
@@ -34,8 +34,8 @@ colDisposition, \
 colPermCount,   \
 colOwner,       \
 colWriters,     \
-colReaders,     \
 colCommenters,  \
+colReaders,     \
 colMissingWriters,    \
 colMissingCommenters, \
 colMissingEntirely,   \
@@ -175,7 +175,7 @@ with open(inputCSV, newline='', encoding='utf-8-sig') as csvfile:
             missingCommenters = ', '.join(sorted(missingCommenters))
             worksheet.write_string(row, colMissingCommenters, missingCommenters)
 
-            missingEntirely = teamAll - roles['writer'] - roles['commenter']
+            missingEntirely = teamAll - roles['writer'] - roles['commenter'] - roles['reader']
             missingEntirely.discard(owner)
             missingEntirely = ', '.join(sorted(missingEntirely))
             worksheet.write_string(row, colMissingEntirely, missingEntirely)

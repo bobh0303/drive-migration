@@ -7,7 +7,7 @@ import xlsxwriter
 
 # Input and output files
 inputCSV = 'master.csv'
-outputExcel = 'output-v4.xlsx'
+outputExcel = 'output-v6.xlsx'
 
 # inputCST headers:
 HISTORY = 'History'
@@ -136,6 +136,7 @@ with open(inputCSV, newline='', encoding='utf-8-sig') as csvfile:
             
             # process permissions, if any.
             roles = {}
+            inhDisabled = {}
             for p in range(permCount):
                 # check for link-sharing
                 fileDiscovery = line.get(f'permissions.{p}.allowFileDiscovery', '')
@@ -152,9 +153,12 @@ with open(inputCSV, newline='', encoding='utf-8-sig') as csvfile:
                 if email == 'nrsi.old.gdocs@gmail.com':
                     email = 'nrsi.old.gdocs'
                 roles.setdefault(role,set()).add(email)
+                inhDisabled[email] = line.get(f'permissions.{p}.inheritedPermissionsDisabled','')
             # add permissions to output
             for col,role in zip(range(colOwner,colOwner+4),('owner','writer', 'reader', 'commenter')):
-                worksheet.write_string(row, col, ', '.join(sorted(roles.setdefault(role,set()))))
+                worksheet.write_string(row, col, ', '.join(
+                    [f'{email}|' if inhDisabled[email] else email for email in sorted(roles.setdefault(role,set()))]
+                    ))
             
             # Do some checks:
             try:
